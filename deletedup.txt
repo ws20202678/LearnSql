@@ -1,0 +1,193 @@
+-- Database: Practice
+
+-- DROP DATABASE IF EXISTS "Practice";
+
+CREATE DATABASE "Practice"
+    WITH
+    OWNER = postgres
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'English_India.1252'
+    LC_CTYPE = 'English_India.1252'
+    TABLESPACE = pg_default
+    CONNECTION LIMIT = -1
+    IS_TEMPLATE = False;
+	
+select * from Practice
+
+
+
+
+
+
+
+-- Remove duplicate records from a table
+-- We can do the same in multiple ways
+
+CREATE TABLE IF NOT EXISTS employee (
+   id serial PRIMARY KEY,
+   employee_name  varchar(64) NOT NULL,
+   designation  varchar(64) NOT NULL,
+   department varchar(64) NOT NULL,
+   manager_name varchar(64),
+   salary float
+);
+
+select * from employee
+
+Insert into employee(employee_name,designation,department,manager_name,salary) values ('John Freeman','Software Engineer','IT','Ray Johnson',20000);
+Insert into employee(employee_name,designation,department,manager_name,salary) values ('Chris Harris','Software Engineer','IT','Ray Johnson',40000);
+Insert into employee(employee_name,designation,department,manager_name,salary) values ('Ray Johnson','Staff Engineer','IT','Brian Sullivan',60000);
+Insert into employee(employee_name,designation,department,manager_name,salary) values ('Brian Sullivan','Architect','IT','Michael Hopkins',100000);
+Insert into employee(employee_name,designation,department,manager_name,salary) values ('Tim Sullivan','Devops','IT','Brian Sullivan',40000);
+Insert into employee(employee_name,designation,department,manager_name,salary) values ('Tim Sullivan','Devops','IT','Brian Sullivan',40000);
+Insert into employee(employee_name,designation,department,manager_name,salary) values ('Mary Harris','Devops','IT','Brian Sullivan',350000);
+Insert into employee(employee_name,designation,department,manager_name,salary) values ('Steve Buckner','Auditor','Finance','George Hastings',1200000);
+Insert into employee(employee_name,designation,department,manager_name,salary) values ('Charles Chappel','Accountant','Finance','Steve Buckner',100000);
+Insert into employee(employee_name,designation,department,manager_name,salary) values ('John Freeman','Software Engineer','IT','Ray Johnson',20000);
+
+drop table employee
+
+select employee_name,designation,manager_name,count(*)
+from employee
+group by employee_name,designation,manager_name
+
+
+delete from employee
+where id in (select max(id)
+				from employee
+				group by employee_name,designation,manager_name
+			    having count(*)>1
+            )
+select * from employee
+drop table employee
+
+
+update employee set employee_name = 'Tim Sullivan' where id=6
+------------------------------------------------------------------
+
+select * from employee
+
+truncate employee
+
+select e2.*
+from employee e1
+join employee e2 on e1.employee_name = e2.employee_name 
+and e1.designation = e2.designation
+and e1.department = e2.department
+where e1.id < e2.id
+
+
+delete from employee
+where id in (select e2.id
+			from employee e1
+			join employee e2 on e1.employee_name = e2.employee_name 
+			and e1.designation = e2.designation
+			and e1.department = e2.department
+			where e1.id < e2.id
+			)
+
+
+-------------------------------------------------
+
+--Using Window Function
+select * 
+,row_number() over (partition by employee_name,designation,department,manager_name) as ser_num
+from employee
+
+select * from (
+			select * 
+			,row_number() over (partition by employee_name,designation,department,manager_name) as ser_num
+			from employee
+      ) as e1
+	  where e1.ser_num > 1
+
+delete from employee
+where id in  (
+            select id from (
+			select * 
+			,row_number() over (partition by employee_name,designation,department,manager_name) as ser_num
+			from employee
+      ) as e1
+	  where e1.ser_num > 1)
+
+select * from employee
+
+------------------------------------
+-- Using min function 
+select employee_name,designation,department,manager_name,min(id)
+from employee
+group by employee_name,designation,department,manager_name
+
+select * from employee
+where id not in (
+				select min(id)
+				from employee
+				group by employee_name,designation,department,manager_name)
+				
+delete from employee
+where id not in (
+				select min(id)
+				from employee
+				group by employee_name,designation,department,manager_name)
+
+
+-----------------------------------------------
+
+--using backup table
+create table employee_new
+as select * from employee 
+where 1=2
+
+select * from employee_new
+
+insert into employee_new
+select * from employee
+where id in  (
+                select min(id)
+				from employee
+				group by employee_name,designation,department,manager_name
+               )
+drop table employee
+
+alter table employee_new rename to employee
+
+
+--------------------------------------------------
+
+-- Using new table for backup without dropping the original table
+create table employee_new
+as select * from employee 
+where 1=2
+
+select * from employee_new
+
+insert into employee_new
+select * from employee
+where id in  (
+                select min(id)
+				from employee
+				group by employee_name,designation,department,manager_name
+               )
+truncate table employee
+
+insert into employee
+select * from employee_new
+
+drop table employee_new
+
+
+------------------------------
+--If all the columns are duplicated
+--Delete using CTID
+select *,CTID
+from employee
+
+delete from employee
+where ctid in (
+           select max(ctid)
+	       from employee 
+	       group by 
+ )
+
+
+
